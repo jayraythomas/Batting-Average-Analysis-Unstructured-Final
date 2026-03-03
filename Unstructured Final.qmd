@@ -1,0 +1,246 @@
+---
+title: "Final Project"
+author: "Jimmy Thomas"
+format: html
+---
+
+
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+import requests 
+import time
+import seaborn as sns
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+```
+
+
+```{python}
+years = [2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+```
+
+
+For my final project, I decided to scrape player data from ESPN.com over the last 10 complete seasons (2015-2025). Modern baseball has evolved past the necessity for batting average to be the golden goose of offensive production. Most baseball fans and analysts across the game have accpeted WAR as the most comprehensive stat when viewing a players total value. However, there are some who still think that batting average is the best measure of offensive value. These fans are too stubborn to learn modern advanced statistics, which is why for this project I am looking at stats that are much simpler to understand, namely OPS. The data to be pulled in is from the top 50 players in batting average and the top 50 players in WAR for each season. Duplicate players will be dropped. The first chunk could be used to pull team stats, however after looking into the problem more, I decided to focus on player level instead. I have left it in for reference.
+
+```{python}
+all_years_data = []
+
+for year in years:
+    print(f"Scraping data for {year}...")
+    
+    url = f"https://www.espn.com/mlb/stats/team/_/season/{year}/seasontype/2"
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        tables = pd.read_html(response.text)
+        if len(tables) >= 2:
+            team_names = tables[0]
+            team_stats = tables[1]
+            merged_table = pd.concat([team_names, team_stats], axis=1)
+
+            merged_table['Year'] = year
+
+            all_years_data.append(merged_table)
+        else:
+            print(f"Could not get data for {year}.")
+            
+    else:
+        print(f"Failed to retrieve data for {year}. Status code: {response.status_code}")
+    
+    time.sleep(2)
+
+
+final_df = pd.concat(all_years_data, ignore_index=True)
+
+```
+
+
+This code below will be used to genereate the player stats for the years 2015-2025. Here we will look more into whether or not batting average is a good indicator of offense output,or if a more modern statistic such as WAR tells a better story. To generate the player dataframe, we will first pull in the table from ESPN that includes the top 50 players in batting averages, followed by the table that includes the top 50 players in WAR. I will then merge these two tables together, drop duplicative rows, and gather our complete dataframe that way.   
+
+```{python}
+all_years_data2 = []
+
+for year in years:
+    print(f"Scraping data for {year}...")
+    
+    url = f"https://www.espn.com/mlb/stats/player/_/season/{year}/seasontype/2"
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        tables = pd.read_html(response.text)
+        if len(tables) >= 2:
+            team_names = tables[0]
+            team_stats = tables[1]
+            merged_table = pd.concat([team_names, team_stats], axis=1)
+
+            merged_table['Year'] = year
+
+            all_years_data2.append(merged_table)
+        else:
+            print(f"Could not get data for {year}.")
+            
+    else:
+        print(f"Failed to retrieve data for {year}. Status code: {response.status_code}")
+    
+    time.sleep(2)
+
+
+final_df2 = pd.concat(all_years_data2, ignore_index=True)
+
+
+```
+
+
+```{python}
+all_years_data3 = []
+
+for year in years:
+    print(f"Scraping data for {year}...")
+    
+    url = f"https://www.espn.com/mlb/stats/player/_/season/{year}/seasontype/2/table/batting/sort/WARBR/dir/desc"
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        tables = pd.read_html(response.text)
+        if len(tables) >= 2:
+            team_names = tables[0]
+            team_stats = tables[1]
+            merged_table = pd.concat([team_names, team_stats], axis=1)
+
+            merged_table['Year'] = year
+
+            all_years_data3.append(merged_table)
+        else:
+            print(f"Could not get data for {year}.")
+            
+    else:
+        print(f"Failed to retrieve data for {year}. Status code: {response.status_code}")
+    
+    time.sleep(2)
+
+
+final_df3 = pd.concat(all_years_data3, ignore_index=True)
+```
+
+
+```{python}
+combined_df = pd.concat([final_df2, final_df3], ignore_index=True)
+
+combined_df = combined_df.drop_duplicates(subset=['Name', 'Year'])
+
+combined_df[['Name', 'Team(s)']] = combined_df['Name'].str.extract(r'^(.*?)([A-Z/]+)$')
+```
+
+
+The graph below shows the relationship between batting average and WAR for the top 50 players in each category for the years 2021-2025. Each point represents a player, colored by year. The red line represents a linear fit to the data, showing the overall trend between batting average and WAR. While it does seem to trend up, there is not a strong relationship between these datapoints as players with lower batting averages can still have high WAR. It is interesting to note the seemingly "sharp" cutoff that takes place around the .260 batting mark, and the 4 WAR mark. Because this data cut off at the top 50, it can be reasonably assumed the lowest batting average in the top 50 is around .260, and the lowest WAR in the top 50 is around 4. It is worth noting that for all of these graphs below, there is color gradient added for year. This was done to show that year does not actually have an impact or bias on these relationships as the trends are generally consistent across all years.
+
+```{python}
+plt.figure(figsize=(12, 6))
+sns.scatterplot(data=combined_df, x='AVG', y='WAR', hue='Year', palette='Reds')
+sns.regplot(data=combined_df, x='AVG', y='WAR', scatter=False, color='red', line_kws={'label':"Linear Fit"})
+plt.title("Scatter Plot of AVG vs WAR by Year")
+plt.xlabel("Batting Average")
+plt.ylabel("WAR")
+plt.legend(title='Year')
+plt.grid(alpha=0.3)
+plt.show()
+```
+
+
+Here I added in two lines to further break it down and look at the graph in terms of quadrants. The top right would be your best all-around players who do well in hitting for contact and overall at the plate/in the field. These are the players who provide the most value to their teams. The top left would be players who have a high WAR but a low batting average, which demonstrates players who make up for the lower contact with other skills such as power, speed, or fielding. Bottom right quadrant is a tough area for this graph because it shows players who bring a lot of contactability to their team, but get most of their value from that contact. This shows one way that players are comparatively less valuable than their peers with similar or even lower averages. My biggest takeaway is when you pull the top 50 from each of these stats (and drop duplicates), you end up with more players seeming out of place, who may have qualified for the dataset from average instead of WAR. Let's look at some other offensive stats to find it there are better trends for storytelling.
+
+
+```{python}
+plt.figure(figsize=(12, 6))
+sns.scatterplot(data=combined_df, x='AVG', y='WAR', hue='Year', palette='Reds')
+sns.regplot(data=combined_df, x='AVG', y='WAR', scatter=False, color='red', line_kws={'label':"Linear Fit"})
+plt.axvline(x=0.26, color='black', linestyle='--', alpha=0.7)
+plt.axhline(y=4, color='black', linestyle='--', alpha=0.7)
+plt.title("Scatter Plot of AVG vs WAR by Year")
+plt.xlabel("Batting Average")
+plt.ylabel("WAR")
+plt.legend(title='Year')
+plt.grid(alpha=0.3)
+plt.show()
+```
+
+
+The following graph I actaully find extremely interesting to look at with the relationship between OPS and WAR. Despite the fact that batting average is semi-baked into OPS, there is a much stronger and more recognized trend with the same sample group as batting average. OPS tells a more clear picture than AVG when demonstrating total value as evident by comparing the trendlines of the two graphs. Above the line shows either extreme value in their power hitting or ability to find value in baserunnind and defense, while players below the line likely derive most of their value from their production at the plate. Even in both extremes of the graph we an increase in OPS leading to and increase in WAR, where the previous graph was much more scattered. 
+
+
+
+```{python}
+plt.figure(figsize=(12, 6))
+sns.scatterplot(data=combined_df, x='OPS', y='WAR', hue='Year', palette='Blues')
+sns.regplot(data=combined_df, x='OPS', y='WAR', scatter=False, color='red', line_kws={'label':"Linear Fit"})
+plt.title("Scatter Plot of OPS vs WAR by Year")
+plt.xlabel("OPS")
+plt.ylabel("WAR")
+plt.legend(title='Year')
+plt.grid(alpha=0.3)
+plt.show()
+```
+
+
+The following two graphs further display other variable's interaction with WAR. While they are not as central to the overall argument made in this project, I still find them interesting and worthwhile to observe. There is so much that gets baked in to a player's overall value that I think it is interesting to see how other all the stats we have available to us work.
+
+```{python}
+plt.figure(figsize=(12, 6))
+sns.scatterplot(data=combined_df, x='R', y='WAR', hue='Year', palette='Greens')
+sns.regplot(data=combined_df, x='R', y='WAR', scatter=False, color='red', line_kws={'label':"Linear Fit"})
+plt.title("Scatter Plot of Runs vs WAR by Year")
+plt.xlabel("Runs")
+plt.ylabel("WAR")
+plt.legend(title='Year')
+plt.grid(alpha=0.3)
+plt.show()
+
+```
+
+
+
+
+```{python}
+plt.figure(figsize=(12, 6))
+sns.scatterplot(data=combined_df, x='H', y='WAR', hue='Year', palette='YlOrRd')
+sns.regplot(data=combined_df, x='H', y='WAR', scatter=False, color='red', line_kws={'label':"Linear Fit"})
+plt.title("Scatter Plot of Hits vs WAR by Year")
+plt.xlabel("Hits")
+plt.ylabel("WAR")
+plt.legend(title='Year')
+plt.grid(alpha=0.3)
+plt.show()
+```
+
+```{python}
+plt.figure(figsize=(12, 6))
+sns.scatterplot(data=combined_df, x='SB', y='WAR', hue='Year', palette='Greens')
+sns.regplot(data=combined_df, x='SB', y='WAR', scatter=False, color='red', line_kws={'label':"Linear Fit"})
+plt.title("Scatter Plot of Stolen Bases vs WAR by Year")
+plt.xlabel("Stolen Bases")
+plt.ylabel("WAR")
+plt.legend(title='Year')
+plt.grid(alpha=0.3)
+plt.show()
+```
+
+
+Below is a regression model that takes into account multiple variables that were pulled in from the dataset. This model is used to predict WAR based on the other stats that were pulled in. The R-squared value of this model is 0.85, which means that 85% of the variance in WAR can be explained by the independent variables in the model. This however is not surprising as the formula for WAR does take into account what a lot of these variables represent. What is important from this however is the difference in the coefficients for AVG and OPS. You may notice that OPS has both a more significant effect on WAR and we can positively say that as OPS increases, so does WAR, all else equal. Batting average does not tell this same story.
+
+
+```{python}
+r1 = sm.formula.ols('WAR ~ AVG + OPS + R + TB + SB + BB', data=combined_df).fit()
+r1.summary()
+```
+
+
