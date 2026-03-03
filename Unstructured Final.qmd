@@ -235,6 +235,19 @@ plt.show()
 ```
 
 
+```{python}
+plt.figure(figsize=(12, 6))
+sns.scatterplot(data=combined_df, x='TB', y='WAR', hue='Year', palette='Greens')
+sns.regplot(data=combined_df, x='TB', y='WAR', scatter=False, color='red', line_kws={'label':"Linear Fit"})
+plt.title("Scatter Plot of Total Bases vs WAR by Year")
+plt.xlabel("Total Bases")
+plt.ylabel("WAR")
+plt.legend(title='Year')
+plt.grid(alpha=0.3)
+plt.show()
+```
+
+
 Below is a regression model that takes into account multiple variables that were pulled in from the dataset. This model is used to predict WAR based on the other stats that were pulled in. The R-squared value of this model is 0.85, which means that 85% of the variance in WAR can be explained by the independent variables in the model. This however is not surprising as the formula for WAR does take into account what a lot of these variables represent. What is important from this however is the difference in the coefficients for AVG and OPS. You may notice that OPS has both a more significant effect on WAR and we can positively say that as OPS increases, so does WAR, all else equal. Batting average does not tell this same story.
 
 
